@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLG → Digital Sales — Opportunity Distribution</title>
+<style>
+  :root { color-scheme: light; }
+  body {
+    --page: #f9f9f7; --surface-1: #fcfcfb;
+    --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --baseline: #c3c2b7;
+    --nb: #2a78d6; --exp: #eb6834;
+    --over: #2a78d6; --under: #e34948;
+    --funnel-1: #2a78d6; --funnel-2: #5598e7; --funnel-3: #86b6ef;
+    --band: rgba(137,135,129,0.16);
+    --good: #0ca30c; --good-text: #006300; --warn: #b8860b; --warn-bg: #fab219;
+    --ring: rgba(11,11,11,0.10);
+  }
+  body[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19;
+    --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --baseline: #383835;
+    --nb: #3987e5; --exp: #d95926;
+    --over: #3987e5; --under: #e66767;
+    --band: rgba(137,135,129,0.22);
+    --good: #0ca30c; --good-text: #0ca30c;
+    --ring: rgba(255,255,255,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d; --surface-1: #1a1a19;
+      --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
+      --grid: #2c2c2a; --baseline: #383835;
+      --nb: #3987e5; --exp: #d95926;
+      --over: #3987e5; --under: #e66767;
+      --band: rgba(137,135,129,0.22);
+      --good: #0ca30c; --good-text: #0ca30c;
+      --ring: rgba(255,255,255,0.10);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 14px; line-height: 1.45;
+  }
+  .viz-root { max-width: 1080px; margin: 0 auto; padding: 28px 24px 60px; }
+  .app-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; }
+  .sub { color: var(--ink2); font-size: 13px; }
+  .sub a { color: var(--nb); }
+  .meta { text-align: right; }
+  .refreshed { color: var(--muted); font-size: 12px; }
+  .btn {
+    background: var(--surface-1); color: var(--ink2); border: 1px solid var(--ring);
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; margin-bottom: 6px;
+  }
+  .btn:hover { color: var(--ink); }
+  h2.sec-title { font-size: 16px; font-weight: 650; margin: 34px 0 2px; }
+  .sec-sub { color: var(--ink2); font-size: 13px; margin: 0 0 12px; }
+  .card {
+    background: var(--surface-1); border: 1px solid var(--ring); border-radius: 10px;
+    padding: 16px 16px 10px; overflow: visible;
+  }
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 14px; }
+  .kpi { background: var(--surface-1); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px; }
+  .kpi .label { color: var(--ink2); font-size: 12px; margin-bottom: 4px; }
+  .kpi .value { font-size: 26px; font-weight: 650; }
+  .kpi .delta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .filter-row {
+    display: flex; gap: 18px; align-items: flex-end; flex-wrap: wrap;
+    margin-top: 22px; padding: 12px 14px;
+    background: var(--surface-1); border: 1px solid var(--ring); border-radius: 10px;
+  }
+  .filter-row label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .filter-row select {
+    font: inherit; color: var(--ink); background: var(--page);
+    border: 1px solid var(--ring); border-radius: 6px; padding: 5px 8px;
+  }
+  .verdict {
+    margin-top: 14px; border-radius: 10px; padding: 14px 16px; font-size: 14px;
+    background: var(--surface-1); border: 1px solid var(--ring); border-left: 4px solid var(--good);
+  }
+  .verdict.warn { border-left-color: var(--warn-bg); }
+  .verdict .v-head { font-weight: 650; margin-bottom: 4px; }
+  .verdict .v-body { color: var(--ink2); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; border-radius: 999px; padding: 2px 9px;
+  }
+  .chip.good { color: var(--good-text); background: color-mix(in srgb, var(--good) 14%, transparent); }
+  .chip.watch { color: var(--warn); background: color-mix(in srgb, var(--warn-bg) 22%, transparent); }
+  .legend { display: flex; gap: 16px; font-size: 12px; color: var(--ink2); margin: 4px 0 8px; }
+  .legend .key { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .legend .ln { width: 16px; height: 2px; border-radius: 1px; display: inline-block; }
+  svg { display: block; width: 100%; height: auto; }
+  .axis-text { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .name-text { fill: var(--ink2); font-size: 12px; }
+  .val-text { fill: var(--ink2); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .base-line { stroke: var(--baseline); stroke-width: 1; }
+  .ref-line { stroke: var(--muted); stroke-width: 1; }
+  .band { fill: var(--band); }
+  .mark { cursor: default; }
+  .mark:hover, .mark:focus-visible { filter: brightness(1.12); outline: none; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--surface-1); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: color-mix(in srgb, var(--muted) 8%, transparent); }
+  footer { margin-top: 36px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+  footer code { background: var(--surface-1); padding: 1px 5px; border-radius: 4px; border: 1px solid var(--ring); }
+  #tip {
+    position: fixed; pointer-events: none; z-index: 50; display: none;
+    background: var(--surface-1); color: var(--ink); border: 1px solid var(--ring);
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+    max-width: 300px;
+  }
+  #tip .t-title { font-weight: 650; margin-bottom: 3px; }
+  #tip .t-row { display: flex; justify-content: space-between; gap: 14px; }
+  #tip .t-row .v { font-weight: 650; font-variant-numeric: tabular-nums; }
+  #tip .t-row .k { color: var(--ink2); display: inline-flex; align-items: center; gap: 6px; }
+  #tip .lk { width: 10px; height: 2px; border-radius: 1px; display: inline-block; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+  .fn-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+</style>
+</head>
+<body data-theme="">
+<div class="viz-root">
+  <header class="app-header">
+    <div>
+      <h1>PLG → Digital Sales — Opportunity Distribution</h1>
+      <div class="sub">Per-rep fairness view of opportunities created by the PLG team since <strong>8 Sep 2026</strong> · source:
+        <a href="https://zendesk.lightning.force.com/lightning/r/Report/00OPC000008xcHZ2AY/view" target="_blank" rel="noopener">Opp - PLG NB &amp; EXP (Sept 2026)</a>, Salesforce</div>
+    </div>
+    <div class="meta">
+      <button class="btn" id="theme-toggle">Toggle theme</button>
+      <div class="refreshed" id="stamp">22 Sep 2026, 16:51 CST</div>
+      <div class="refreshed" id="counts-line">—</div>
+    </div>
+  </header>
+
+  <section>
+    <h2 class="sec-title">Where PLG-created opportunities go</h2>
+    <p class="sec-sub">Every opportunity created by a PLG AE since 8 Sep, by where it landed. Count of opportunities — the fairness metric — not value.</p>
+    <div class="card" id="funnel"></div>
+  </section>
+
+  <div class="filter-row">
+    <div><label for="f-region">Rep region</label>
+      <select id="f-region">
+        <option value="All">All regions</option>
+        <option value="AMER/LATAM">AMER/LATAM</option>
+        <option value="EMEA">EMEA</option>
+        <option value="APAC">APAC</option>
+      </select>
+    </div>
+    <div><label for="f-type">Opportunity type</label>
+      <select id="f-type">
+        <option value="All">All (NB + EXP)</option>
+        <option value="New Business">New Business</option>
+        <option value="Expansion">Expansion</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="kpi-row" id="kpi"></div>
+  <div class="verdict" id="verdict"></div>
+
+  <section>
+    <h2 class="sec-title">Opportunities per rep</h2>
+    <p class="sec-sub" id="perrep-sub">—</p>
+    <div class="legend">
+      <span class="key"><span class="sw" style="background:var(--nb)"></span>New Business</span>
+      <span class="key"><span class="sw" style="background:var(--exp)"></span>Expansion</span>
+      <span class="key"><span class="ln" style="background:var(--muted)"></span>Region mean ± 1 SD</span>
+    </div>
+    <div class="card" id="per-rep"></div>
+  </section>
+
+  <section>
+    <h2 class="sec-title">Deviation from expected share</h2>
+    <p class="sec-sub">Each rep's count minus an exactly even share of their region's opportunities. The gray band is the normal range (±1 SD); only reps outside ±2 SD are worth a conversation.</p>
+    <div class="card" id="deviation"></div>
+  </section>
+
+  <section>
+    <h2 class="sec-title">Weekly cadence</h2>
+    <p class="sec-sub">Opportunities distributed to Digital Sales AEs per week since 8 Sep.</p>
+    <div class="legend">
+      <span class="key"><span class="ln" style="background:var(--nb)"></span>New Business</span>
+      <span class="key"><span class="ln" style="background:var(--exp)"></span>Expansion</span>
+    </div>
+    <div class="card" id="weekly"></div>
+  </section>
+
+  <section>
+    <h2 class="sec-title">Fairness by region</h2>
+    <p class="sec-sub">Spread statistics per rep pool. "Spread vs random" compares the observed spread to pure random assignment (1.0 = indistinguishable from random). The χ² p-value tests even distribution within the pool; p ≥ 0.05 means no statistical evidence of imbalance.</p>
+    <div class="card table-wrap" id="region-table"></div>
+  </section>
+
+  <section>
+    <h2 class="sec-title">Per-rep detail</h2>
+    <p class="sec-sub">Active Digital Sales AEs. Click a column to sort.</p>
+    <div class="card table-wrap" id="rep-table"></div>
+  </section>
+
+  <section>
+    <h2 class="sec-title">Opportunity detail</h2>
+    <p class="sec-sub" id="opp-table-sub">—</p>
+    <div class="card table-wrap" id="opp-table"></div>
+  </section>
+
+  <footer>
+    Source: Salesforce opportunities with <code>Created_by_Role__c</code> containing "PLG", created on/after 8 Sep 2026
+    (report <code>00OPC000008xcHZ2AY</code>), pulled live via the Salesforce CLI.<br>
+    Scope: opportunity <em>counts</em> are the fairness metric. "Distributed to Digital Sales" = current opportunity owner holds a Digital Sales AE role
+    on a Digital-segment account (territory segment at carve). Expected share = even split within the rep's region pool of active AEs.<br>
+    Auto-refreshed daily at 11:00 and 17:00. Reps at zero are often recent hires ramping — check start dates before reading into a single name.
+  </footer>
+</div>
+<div id="tip"></div>
+
+<script>
+"use strict";
+const P = {"generatedAt": "2026-09-22T22:51:02+00:00", "startDate": "2026-09-08", "reportUrl": "https://zendesk.lightning.force.com/lightning/r/Report/00OPC000008xcHZ2AY/view", "dashboardUrl": "https://juanfelix-collab.github.io/plg-ds-distribution-dashboard/", "roster": [{"name": "Alba Dell'Angelo", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Albert Cardenas", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Alessandro De Stefano", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Ana Paola Rivas", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Anik Patel", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Antonio Cusanno", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Art Azarenko", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Bia Moreira", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Bruno Souza", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Cassio Astarita", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Claudio Serina", "role": "AMER/LATAM - Digital Sales AE 1", "region": "AMER/LATAM"}, {"name": "Dani Orellan", "role": "AMER/LATAM - Digital Sales AE 1", "region": "AMER/LATAM"}, {"name": "Diego Pérez", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Dámaris Ramírez", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Emilio Palacios", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Emmet Coleman", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Ernesto Canelas", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Gaia Cebulec", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Guilherme Carvalho", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Henrique Gonçalves", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Icarus Besana", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Jan Powol", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Jessica Hishikawa", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Kevin Nolan", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Maria Hoyos", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Maria Soraya Gomez", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Mariana Gonzalez", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Matheus Batista", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Matheus Vieira", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Matthew Pigott", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Niall McLoughlin", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Oliver Alvarez del Castillo", "role": "AMER/LATAM - Digital Sales AE 1", "region": "AMER/LATAM"}, {"name": "Pamela De la Vega", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Pentecost Ozah", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Rafael Lemos", "role": "AMER/LATAM - Digital Sales AE 3", "region": "AMER/LATAM"}, {"name": "Reece Francis", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Rosette Rapin", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Samuel Moncada", "role": "AMER/LATAM - Digital Sales AE 1", "region": "AMER/LATAM"}, {"name": "Scott Paterson", "role": "APAC - Digital Sales AE 2", "region": "APAC"}, {"name": "Susan Bourke", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Thaysa Gonçalves", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Thiago Silva", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Victor Füllemann", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Victor Milagres", "role": "EMEA - Digital Sales AE 1", "region": "EMEA"}, {"name": "Victor Suarez", "role": "AMER/LATAM - Digital Sales AE 1", "region": "AMER/LATAM"}, {"name": "Vinícius Arrulo", "role": "AMER/LATAM - Digital Sales AE 2", "region": "AMER/LATAM"}, {"name": "Youssef Elgamal", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}, {"name": "Zoe Keane", "role": "EMEA - Digital Sales AE 3", "region": "EMEA"}], "opps": [{"id": "006PC00000dW0srYAC", "name": "PLG | EXP | Gyges Labs 深圳市仙瞬科技有限公司 | Sandbox", "account": "Gyges Labs 深圳市仙瞬科技有限公司", "type": "Expansion", "stage": "Lost", "created": "2026-09-08", "close": "2026-09-18", "source": "-", "segment": "SMB", "acctRegion": "APAC", "subRegion": "ASIA", "country": "China", "owner": "Qinxuan Ling", "ownerRole": "APAC - SMB AE GCR", "ownerType": "other", "repRegion": "APAC", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dWHyXYAW", "name": "Tireweb - tireweb - Expansion", "account": "Tireweb", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-08", "close": "2026-09-14", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Heidrich Vicci", "ownerRole": "AMER - SMB CAE East 4", "ownerType": "other", "repRegion": "Other", "createdBy": "Jean Logro"}, {"id": "006PC00000dWJHBYA4", "name": "PLG | NB | Startups | PhrasIQ | Suite Pro", "account": "PhrasIQ", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-08", "close": "2027-02-26", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "INDIA", "country": "India", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dWRHxYAO", "name": "PLG | NB | Suite + WFM", "account": "Sticitt (Pty) Ltd.", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-08", "close": "2026-09-18", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "ILZA", "country": "South Africa", "owner": "Jan Powol", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Alessio Orlando"}, {"id": "006PC00000dWRReYAO", "name": "PLG | EXP | Suite tier + Copilot", "account": "England Boxing", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-08", "close": "2026-12-14", "source": "-", "segment": "SMB", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Sinead Pugh", "ownerRole": "EMEA - SMB AE UKI 3", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dWb2nYAC", "name": "PLG | NB", "account": "Smarter Surfaces", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-08", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "Ireland", "owner": "Alessandro De Stefano", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dXc01YAC", "name": "PLG | EXP | Remac | Suite Professional + Copilot", "account": "Remac, LLP./ J Renee", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-08", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Diego Pérez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Gabriela Serna"}, {"id": "006PC00000dXZ8dYAG", "name": "PLG | NB | Suite team (2)", "account": "Pathos", "type": "New Business", "stage": "Lost", "created": "2026-09-08", "close": "2026-09-17", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Thaysa Gonçalves", "ownerRole": "AMER/LATAM - Digital Sales AE 2", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dXwl9YAC", "name": "PLG | AS DEPORTE SA DE CV ADE050204B3A | NB | Suite Pro/Ent", "account": "AS DEPORTE SA DE CV ADE050204B3A", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-08", "close": "2026-09-30", "source": "-", "segment": "SMB", "acctRegion": "LATAM", "subRegion": "Mexico", "country": "Mexico", "owner": "Mauricio Zúñiga", "ownerRole": "LATAM - SMB AE SSAC", "ownerType": "other", "repRegion": "Other", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dY8eDYAS", "name": "PLG + BDR | CAM | Suite Professional (20) Copilot", "account": "Caribbean Airmail Inc", "type": "New Business", "stage": "04 - Demonstrate Value", "created": "2026-09-08", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Emilio Palacios", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Gabriela Serna"}, {"id": "006PC00000dYCYBYA4", "name": "PLG + DS | CardZone | EXP | Add ARs", "account": "CardZone", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-08", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Iberia", "country": "Spain", "owner": "Dámaris Ramírez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dYNrnYAG", "name": "PLG/EXP/AddAgents(1)/RefluxRaft", "account": "RefluxRaft", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-08", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Maria Hoyos", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000dYbl3YAC", "name": "PLG/NB/ESPro/Odilon", "account": "Odilon Santos", "type": "New Business", "stage": "Lost", "created": "2026-09-08", "close": "2026-09-18", "source": "-", "segment": "Commercial", "acctRegion": "LATAM", "subRegion": "Brazil", "country": "Brazil", "owner": "Fernando Uzum", "ownerRole": "LATAM - Com Brazil Group AE", "ownerType": "other", "repRegion": "Other", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000dYc2nYAC", "name": "PLG | EXP | Agent subdomain:hyundaimotoramerica | 10 Agents Suite Plan", "account": "Hyundai Motor America", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-08", "close": "2026-10-30", "source": "-", "segment": "Enterprise", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Tristan O'Neil", "ownerRole": "AMER - Ent AE West 2", "ownerType": "other", "repRegion": "Other", "createdBy": "Jean Logro"}, {"id": "006PC00000dZFk7YAG", "name": "PLG | EXP | Sandbox", "account": "WTW Software", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-09", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Norway", "owner": "Maria Soraya Gomez", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dZJZBYA4", "name": "PLG | EXP | add chat to plan", "account": "Panther-Batterien GmbH", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-09", "close": "2026-09-14", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "DACH", "country": "Germany", "owner": "Victor Füllemann", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Alessio Orlando"}, {"id": "006PC00000dZRwXYAW", "name": "PLG | NB", "account": "BJ Ecom", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-09", "close": "2026-11-08", "source": "Website-Contact Sales", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ASIA", "country": "Philippines", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Valeria Tomich"}, {"id": "006PC00000da4cvYAA", "name": "PLG-Zero Friction-Expansion-Copilot", "account": "Zero Friction", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-09", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Benelux", "country": "Belgium", "owner": "Maria Soraya Gomez", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Julio Vicente"}, {"id": "006PC00000dZgZ4YAK", "name": "PLG CSM | EXP | WFM (10)", "account": "Outreach Physical and Occupational Therapy and Speech Rehabilitation, PLLC", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-09", "close": "2026-09-18", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Dámaris Ramírez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dZtzMYAS", "name": "PLG | Expansion | New instance | ( 8)", "account": "Playground Global", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-09", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Mariana Gonzalez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000daEsRYAU", "name": "PLG | SMB  Expansion | Plan shift", "account": "Spencer Building Carrier Hotel", "type": "Expansion", "stage": "04 - Demonstrate Value", "created": "2026-09-09", "close": "2026-09-30", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Nick Pacult", "ownerRole": "AMER - SMB CAE West 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Valeria Tomich"}, {"id": "006PC00000daV22YAE", "name": "PLG + CSM | Nic Nac Naturals | EXP | Add Talk Credits", "account": "Nic Nac Naturals", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-09", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Pamela De la Vega", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000datM6YAI", "name": "PLG-Niedner-Expansion-Plan Shift", "account": "Niedner", "type": "Expansion", "stage": "Lost", "created": "2026-09-09", "close": "2026-09-18", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Rafael Lemos", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dbezJYAQ", "name": "PLG | NB | Cx consultoría | Suite Plan", "account": "Cx consultoría", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "LATAM", "subRegion": "SSA", "country": "Peru", "owner": "Pamela De la Vega", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dbnzNYAQ", "name": "PLG | NB | 株式会社Diletto | Suite Professional - 5 seats ZA-08539790", "account": "株式会社Diletto", "type": "New Business", "stage": "Lost", "created": "2026-09-10", "close": "2026-09-10", "source": "Website-Trial", "segment": "SMB", "acctRegion": "APAC", "subRegion": "Japan", "country": "Japan", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dbvaLYAQ", "name": "Collector1 - collector1 - Expansion", "account": "Collector1", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-10", "close": "2026-09-16", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Samuel Moncada", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jean Logro"}, {"id": "006PC00000dbiwWYAQ", "name": "PLG | NB | Startups |  Lociya | Suite Pro", "account": "Lociya", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2027-02-24", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Middle East", "country": "United Arab Emirates", "owner": "Antonio Cusanno", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000dby8QYAQ", "name": "EXP - PLG/CSM - Synaptikon GmbH - Copilot + AI Agents - GC", "account": "Synaptikon GmbH", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "DACH", "country": "Germany", "owner": "Gaia Cebulec", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Alessio Orlando"}, {"id": "006PC00000dc5rRYAQ", "name": "PLG | EXP | Add 1 seat", "account": "Moderan Solutions OÜ", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-10", "close": "2026-09-17", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Eastern Europe", "country": "Estonia", "owner": "Yigit İkinci", "ownerRole": "EMEA - PLG AE", "ownerType": "plg", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dcFMBYA2", "name": "PLG | International Bridge | EXP | Suite Upgrade", "account": "International Bridge", "type": "Expansion", "stage": "Lost", "created": "2026-09-10", "close": "2026-09-11", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Jennifer Leo", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dcVFdYAM", "name": "PLG | EXP | add ADPP", "account": "Buburuza Payments LLC", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-10", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Jessica Hishikawa", "ownerRole": "AMER/LATAM - Digital Sales AE 2", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alessio Orlando"}, {"id": "006PC00000dcYztYAE", "name": "PLG | Awntech Corportation | EXP | Upgrade to Suite (1)", "account": "Awntech Corportation", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Oliver Alvarez del Castillo", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dd15pYAA", "name": "A.D. Artika | EXP | Agent Add (+2) + 11 Storage Units", "account": "Artika.", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-10", "close": "2026-09-11", "source": "Partner", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Alba Dell'Angelo", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jennifer Leo"}, {"id": "006PC00000ddOonYAE", "name": "PLG | NB | True Prodigy Tech Solutions, LLC | Suite Professional + Copilot (34)", "account": "True Prodigy Tech Solutions, LLC", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Antonio Cusanno", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Gabriela Serna"}, {"id": "006PC00000ddHIkYAM", "name": "PLG/NB/SupportTeam(4)/Charter SchoolIT", "account": "Charter SchoolIT", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2026-11-09", "source": "Website-Trial", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Samuel Moncada", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000ddo05YAA", "name": "PLG | Bennett Mounteer LLP | EXP | Add Agents (+4)", "account": "Bennett Mounteer LLP", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-10", "close": "2026-09-11", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Jennifer Leo", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000ddvnxYAA", "name": "PLG/NB/SuiteTeam/Bank of Bots", "account": "Bank of Bots", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2026-11-09", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Victor Suarez", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000de3VNYAY", "name": "PLG/NB/SuiteProfessional/FIAP", "account": "FIAP", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-10", "close": "2027-01-31", "source": "-", "segment": "Commercial", "acctRegion": "LATAM", "subRegion": "Brazil", "country": "Brazil", "owner": "Marcos Ribeiro", "ownerRole": "LATAM - Com Brazil Group AE", "ownerType": "other", "repRegion": "Other", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000de3aDYAQ", "name": "PLG-Sigmetrix-Expansion-Agents add(3)", "account": "Sigmetrix", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-10", "close": "2026-09-18", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Thaysa Gonçalves", "ownerRole": "AMER/LATAM - Digital Sales AE 2", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000deADWYA2", "name": "PLG | EXP | Aura | Suite Plan", "account": "Aura", "type": "Expansion", "stage": "Lost", "created": "2026-09-11", "close": "2026-09-22", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Eastern Europe", "country": "Poland", "owner": "Jean Logro", "ownerRole": "APAC - PLG AE", "ownerType": "plg", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000deKUcYAM", "name": "PLG | EXP | Siegel Adhesives | Copilot | AI Agents", "account": "Siegel Adhesives", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-11", "close": "2026-09-25", "source": "-", "segment": "SMB", "acctRegion": "APAC", "subRegion": "ANZ", "country": "Australia", "owner": "Tim Amassah", "ownerRole": "APAC - SMB AE ANZ", "ownerType": "other", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000deT6TYAU", "name": "PLG | EXP | confitexunderwear | Add agent", "account": "Confitex underwear", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-11", "close": "2026-09-11", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ANZ", "country": "New Zealand", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000del9pYAA", "name": "PLG | EXP | add 1 seat", "account": "exed", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-11", "close": "2026-09-11", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Claudio Serina", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alessio Orlando"}, {"id": "006PC00000desxiYAA", "name": "PLG | Expansion | Add seats (10)", "account": "VSP Miljø", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-11", "close": "2026-09-11", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Norway", "owner": "Valeria Tomich", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dfKp7YAE", "name": "PLG-PersonalSoft-NB", "account": "Personalsoft", "type": "New Business", "stage": "Lost", "created": "2026-09-11", "close": "2026-09-11", "source": "Website-Trial", "segment": "Commercial", "acctRegion": "LATAM", "subRegion": "Brazil", "country": "Brazil", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000df7FDYAY", "name": "PLG-Personalsoft Colombia-NB", "account": "Personalsoft Colombia", "type": "New Business", "stage": "02 - Confirm Need", "created": "2026-09-11", "close": "2026-11-19", "source": "Website-Contact Sales", "segment": "Commercial", "acctRegion": "LATAM", "subRegion": "SSA", "country": "Colombia", "owner": "Laura Bonilla", "ownerRole": "LATAM - Com AE SSAC 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Julio Vicente"}, {"id": "006PC00000dfenqYAA", "name": "PLG | Saleshood, Inc. | EXP | Upgrade to Suite Pro (+5)", "account": "Saleshood, Inc.", "type": "Expansion", "stage": "04 - Demonstrate Value", "created": "2026-09-11", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Oliver Alvarez del Castillo", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dfiZhYAI", "name": "PLG-Town of North Beach, MD-Expansion-Agents Add", "account": "Town of North Beach, MD", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-11", "close": "2026-09-30", "source": "-", "segment": "Public Sector", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Kyle Hensley", "ownerRole": "AMER - Com AE Pubsec 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Julio Vicente"}, {"id": "006PC00000dfoC5YAI", "name": "Golub Capital (CX) | Suite Pro + Copilot (20)", "account": "Golub Capital", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-11", "close": "2026-11-24", "source": "-", "segment": "Commercial", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Cameron Labelle", "ownerRole": "AMER - Com AE East 4", "ownerType": "other", "repRegion": "Other", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dg2a1YAA", "name": "PLG/Startup/INITIATIVE PROJECT INC", "account": "INITIATIVE PROJECT INC", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-11", "close": "2026-11-10", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Ana Paola Rivas", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000dg7eXYAQ", "name": "PLG NB | Mind Health Institute | Suite pro (1) + AI Agents + AI Expert", "account": "Mind Health Institute Beverly Hills", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-11", "close": "2026-11-10", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Diego Pérez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dgEzPYAU", "name": "PLG-Distinguished Vineyards and Wine Partners", "account": "Distinguished Vineyards and Wine Partners", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-11", "close": "2026-09-15", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Ana Paola Rivas", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dgTf5YAE", "name": "PLG | Bennett Mounteer LLP | EXP | Add Talk Licenses (+2)", "account": "Bennett Mounteer LLP", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-11", "close": "2026-09-11", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Jennifer Leo", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000djwe5YAA", "name": "Cymonz - cymonz - Expansion", "account": "Cymonz", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-14", "close": "2026-09-14", "source": "-", "segment": "SMB", "acctRegion": "APAC", "subRegion": "ANZ", "country": "New Zealand", "owner": "Albert Cardenas", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dkFdhYAE", "name": "PLG | EXP | not provided | CX Suite TEam", "account": "not provided", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-14", "close": "2026-11-23", "source": "-", "segment": "SMB", "acctRegion": "APAC", "subRegion": "ASIA", "country": "China", "owner": "Gwen Chen", "ownerRole": "APAC - SMB AE GCR", "ownerType": "other", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dkMGnYAM", "name": "PLG | EXP | HBopeners | Suite", "account": "HBopeners", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-14", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Benelux", "country": "Netherlands", "owner": "Victor Füllemann", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dkQx7YAE", "name": "PLG | EXP | Journey Mobile, Inc. | Term change", "account": "Journey Mobile, Inc.", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-14", "close": "2026-09-25", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Samuel Moncada", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jean Logro"}, {"id": "006PC00000dkbvlYAA", "name": "PLG | NB | PT. Phintraco Technology Indonesia | Suite Team", "account": "PT. Phintraco Technology Indonesia", "type": "New Business", "stage": "Lost", "created": "2026-09-14", "close": "2026-09-18", "source": "-", "segment": "Commercial", "acctRegion": "APAC", "subRegion": "ASIA", "country": "Indonesia", "owner": "Eythan Goh", "ownerRole": "APAC - Com Ent AE SEA 1", "ownerType": "other", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dkcjmYAA", "name": "PLG - EX | Suite Pro + Copilot", "account": "Official Rapid Tests", "type": "Expansion", "stage": "Lost", "created": "2026-09-14", "close": "2026-09-14", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Milena Barbosa", "ownerRole": "EMEA - PLG AE", "ownerType": "plg", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000dl55qYAA", "name": "PLG SMB | Expansion | New instance | Suite Pro (9)", "account": "VE Global Vending Inc.", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-14", "close": "2026-09-30", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Hunter Brandon", "ownerRole": "AMER - SMB CAE East 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dkv1fYAA", "name": "PLG | EXP | Suite Professional Upgrade", "account": "RANDALL", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-14", "close": "2026-09-22", "source": "-", "segment": "Commercial", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Jamie Strauss", "ownerRole": "AMER - Com AE East 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dlVczYAE", "name": "PLG-Gun Dog Supply-Expansion-TPE", "account": "Gun Dog Supply", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-14", "close": "2026-09-14", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dlhuLYAQ", "name": "PLG/Exp/SuitePro/DataBP", "account": "DataBP", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-14", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Emilio Palacios", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000dm9iTYAQ", "name": "PLG-Loh Electronics-Expansion-Support Pro+Copilot", "account": "Loh Electronics AB", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-14", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Sweden", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dmLA9YAM", "name": "Popeyes UK | PLG | Temp Agent", "account": "Popeyes UK", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-14", "close": "2026-09-18", "source": "-", "segment": "SMB", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Darren Canoy", "ownerRole": "EMEA - SMB AE UKI 2", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dmXuUYAU", "name": "PLG-Alignerco-Expansion-Agents add", "account": "ALIGNERCO", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-14", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "APAC", "subRegion": "INDIA", "country": "Pakistan", "owner": "Madhusha Bhati", "ownerRole": "APAC - Com AE India", "ownerType": "other", "repRegion": "APAC", "createdBy": "Julio Vicente"}, {"id": "006PC00000dmezCYAQ", "name": "PLG/EXP/EmpServPro/NYCED", "account": "NYC Department of Education, Office of Data & Reporting", "type": "New Business", "stage": "05 - Secure Commitment", "created": "2026-09-14", "close": "2026-09-30", "source": "-", "segment": "Public Sector", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Lee Rowland", "ownerRole": "AMER - Com AE Pubsec 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000dmkN3YAI", "name": "PLG-Executive Software Limited-Expansion-Suite Pro", "account": "Executive Software Limited", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-14", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ANZ", "country": "New Zealand", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dmmGoYAI", "name": "PLG | EXP | deverus | Suite Pro", "account": "deverus", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-14", "close": "2026-09-25", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Jean Logro", "ownerRole": "APAC - PLG AE", "ownerType": "plg", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dmyeXYAQ", "name": "PLG | EXP | Greems Technologies | Automated Resolution", "account": "Greems Technologies", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-15", "close": "2026-09-25", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "ILZA", "country": "Israel", "owner": "Matthew Pigott", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000dnHUHYA2", "name": "Staffeto - staffeto - New Business", "account": "Staffeto", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-15", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Claudio Serina", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jean Logro"}, {"id": "006PC00000dnLsrYAE", "name": "PLG | NB | FARMACIA GARIN | Suite", "account": "FARMACIA GARIN", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Iberia", "country": "Spain", "owner": "Alba Dell'Angelo", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dnD2bYAE", "name": "PLG - EX| Social Messaging", "account": "Glasses2you Ltd", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-15", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Alessandro De Stefano", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000dnQ7lYAE", "name": "PLG - EX | Suite Pro (8x)", "account": "Canine&Co", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-15", "close": "2026-09-25", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "ILZA", "country": "South Africa", "owner": "Henrique Gonçalves", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000dnRBtYAM", "name": "PLG | EXP | Data center location add-on (AU)", "account": "coretec Solutions pty ltd", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "SMB", "acctRegion": "APAC", "subRegion": "ANZ", "country": "Australia", "owner": "Martin Rusnak", "ownerRole": "APAC - SMB AE ANZ", "ownerType": "other", "repRegion": "APAC", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dnRobYAE", "name": "PLG - EX | BoB Copilot", "account": "Futurae Technologies AG", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "DACH", "country": "Switzerland", "owner": "Alessandro De Stefano", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000dnRS3YAM", "name": "PLG | EXP | add copilot | HIPAA & BAA", "account": "Miiskin", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Denmark", "owner": "Alba Dell'Angelo", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Alessio Orlando"}, {"id": "006PC00000dndrPYAQ", "name": "PLG CSM | Upgrade + Copilot", "account": "Herology", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "Ireland", "owner": "Victor Füllemann", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dnk01YAA", "name": "PLG - EX | Suite Growth", "account": "Azdio", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-17", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Eastern Europe", "country": "Bulgaria", "owner": "Niall McLoughlin", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000dnikcYAA", "name": "PLG | NB | Cognitron", "account": "Cognitron", "type": "New Business", "stage": "05 - Secure Commitment", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Kevin Nolan", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Alessio Orlando"}, {"id": "006PC00000dnkmPYAQ", "name": "PLG | EXP | add 1 seat", "account": "DataStation", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-16", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Alessio Orlando", "ownerRole": "EMEA - PLG AE", "ownerType": "plg", "repRegion": "EMEA", "createdBy": "Alessio Orlando"}, {"id": "006PC00000dnkEZYAY", "name": "PLG | Seniortek Oy (via Partner) | EXP | Add Agent (+1)", "account": "Seniortek Oy", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-16", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Finland", "owner": "Matthew Pigott", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dnyarYAA", "name": "PLG NB - Support Team", "account": "Gourmet Food Marketplace", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-21", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Samuel Moncada", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Yigit İkinci"}, {"id": "006PC00000do0nxYAA", "name": "PLG-Ehra Talent Solutions-Expansion-Agents add(1)", "account": "Ehra Talent Solutions", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Benelux", "country": "Netherlands", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000do2hhYAA", "name": "PLG-Colocation America-Expansion-Plan Switch/Add products", "account": "Colocation America", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-15", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Mariana Gonzalez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000doDWfYAM", "name": "PLG | NB | Suite + HIPAA", "account": "Hope for the Journey", "type": "New Business", "stage": "03 - Establish Value", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Diego Pérez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Yigit İkinci"}, {"id": "006PC00000douerYAA", "name": "PLG/EXP/SuiteTeam(4)/Olive", "account": "Olive", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "SMB", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Andy Smyth", "ownerRole": "EMEA - SMB AE UKI 2", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000doxWHYAY", "name": "PLG/Exp/SuitePro/GGT", "account": "Go Global Travel", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-15", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "EMEA", "subRegion": "ILZA", "country": "Israel", "owner": "Karina Masolova", "ownerRole": "EMEA - AE Med", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000doxfyYAA", "name": "CSM-Taylor's & Co - Expansion-Agents add(1)", "account": "TAYLOR'S & CO. INC.", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-16", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Niall McLoughlin", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Julio Vicente"}, {"id": "006PC00000dpLK5YAM", "name": "PLG-60East Technologies Inc.-Expansion- Agents add", "account": "60East Technologies Inc.", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-17", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Claudio Serina", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dpaFtYAI", "name": "ATR Distributing - atrautomation - Expansion", "account": "ATR Distributing", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-15", "close": "2026-09-15", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Pamela De la Vega", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000dpaEJYAY", "name": "PLG | EXP | Sorenson Communications | Guide Enterprise", "account": "Sorenson Communications", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Enterprise", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Oz Davis", "ownerRole": "AMER - Ent AE West 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dph4TYAQ", "name": "PLG | NB | Startups |  digitalplatformsandmarketplaceslimited | Suite Pro", "account": "eDropShip", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-16", "close": "2027-02-26", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Antonio Cusanno", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000dphkPYAQ", "name": "PLG | EXP | Flare | Add agents", "account": "Flare", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-16", "close": "2026-09-16", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Rashmi Aggarwal", "ownerRole": "AMER - SMB CAE East 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Jean Logro"}, {"id": "006PC00000dptnDYAQ", "name": "PLG | EXP | shopPOPdisplays | Upgrade to Suite Team or Suite Growth", "account": "shopPOPdisplays", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-16", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Rafael Lemos", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jean Logro"}, {"id": "006PC00000dq1cjYAA", "name": "Barrio Developments - quayviewdefectsbfc - Expansion", "account": "Barrio Developments", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-16", "close": "2026-09-16", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ANZ", "country": "Australia", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dqBybYAE", "name": "PLG | EXP | Add 3 seat", "account": "Humantra", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Bia Moreira", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dqEObYAM", "name": "PLG | EXP | Add 3 seat", "account": "Humantra", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Bia Moreira", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dqBSMYA2", "name": "PLG | EXP | AR Credits", "account": "Staffvetting.com", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Yigit İkinci", "ownerRole": "EMEA - PLG AE", "ownerType": "plg", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dqRosYAE", "name": "PLG | 3 agents", "account": "Humantra", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Yigit İkinci", "ownerRole": "EMEA - PLG AE", "ownerType": "plg", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dqaovYAA", "name": "PLG | EXP | Add 1 seat", "account": "Bronkhorst High-Tech", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "EMEA", "subRegion": "Benelux", "country": "Netherlands", "owner": "René van Doornik", "ownerRole": "EMEA - Com AE North Benelux", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dqp3BYAQ", "name": "PLG-Revella-NB", "account": "Revella", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-16", "close": "2026-11-15", "source": "Website-Contact Sales", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ASIA", "country": "Philippines", "owner": "Ernesto Canelas", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Julio Vicente"}, {"id": "006PC00000dquCXYAY", "name": "PLG | EXP | API Limit Increase / Plan Upgrade", "account": "Focal  Systems", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-16", "close": "2026-09-29", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Ryan Addiego", "ownerRole": "AMER - SMB CAE West 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dr5mHYAQ", "name": "CSM-Antares Audio Technologies-Expansion-ARs", "account": "Antares Audio Technologies, LLC", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-16", "close": "2026-10-15", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Matheus Batista", "ownerRole": "AMER/LATAM - Digital Sales AE 2", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000drAsPYAU", "name": "PLG - EX | Add 1 seat", "account": "PayHop Tecnologia S.A.", "type": "Expansion", "stage": "04 - Demonstrate Value", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "LATAM", "subRegion": "Brazil", "country": "Brazil", "owner": "Matheus Batista", "ownerRole": "AMER/LATAM - Digital Sales AE 2", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Milena Barbosa"}, {"id": "006PC00000drfMlYAI", "name": "PLG + CSM | DingoBlu | EXP | Add QA", "account": "DingoBlu", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Pamela De la Vega", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000drsAJYAY", "name": "PLG/EXP/TalkPartner/ATR", "account": "ATR Distributing", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Samuel Moncada", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000ds35jYAA", "name": "PLG/NB/SuitePro(45)/Coinz", "account": "Coinz", "type": "New Business", "stage": "02 - Confirm Need", "created": "2026-09-16", "close": "2026-11-15", "source": "Website-Contact Sales", "segment": "SMB", "acctRegion": "LATAM", "subRegion": "SSA", "country": "Costa Rica", "owner": "Ana Zamacona", "ownerRole": "LATAM - SMB AE SSAC", "ownerType": "other", "repRegion": "Other", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000drnLxYAI", "name": "PLG-Native Frame-Expansion-Suite Growth", "account": "Native Frame", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dsQezYAE", "name": "PLG-RoomSync-Temporary Agents", "account": "RoomSync", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-16", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000dsQ3uYAE", "name": "PLG | NB | astrovialabscom | Chat Team", "account": "Astrovia Labs", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-17", "close": "2026-09-17", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "INDIA", "country": "Pakistan", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dsV1zYAE", "name": "PLG | NB | astrovialabscomhelp | Chat Team", "account": "Astrovia Labs", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-17", "close": "2026-09-17", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "INDIA", "country": "Pakistan", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dsPZGYA2", "name": "PLG | NB | astrovialabscomsupport  | Chat Team", "account": "Astrovia Labs", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-17", "close": "2026-09-17", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "INDIA", "country": "Pakistan", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000dsf9OYAQ", "name": "PLG | EXP | Link Foods Australia Pty Ltd | Suite Enterprise for 3 Seats", "account": "Link Foods Australia Pty Ltd", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "APAC", "subRegion": "ANZ", "country": "New Zealand", "owner": "Greg Shearer", "ownerRole": "APAC - Com AE ANZ South", "ownerType": "other", "repRegion": "APAC", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dsvsTYAQ", "name": "PLG | EXP | Porsche Middle East and Africa FZE | Suite Growth", "account": "Porsche Middle East and Africa FZE", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-17", "close": "2026-09-30", "source": "-", "segment": "Strategic", "acctRegion": "EMEA", "subRegion": "Middle East", "country": "United Arab Emirates", "owner": "Johannes Lober", "ownerRole": "EMEA - Strategic AE Central", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000dswgUYAQ", "name": "PLG | EXP | Clipper | Zendesk AI", "account": "Clipper", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-10-31", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Victor Suarez", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dszBJYAY", "name": "PLG | EXP | Colosio srl | Add one seat to Suite Growth", "account": "Colosio srl", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-17", "close": "2026-09-18", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Italy", "country": "Italy", "owner": "Zoe Keane", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000dt3rdYAA", "name": "PLG | EXP | Add 20 seat", "account": "Capgemini UK Plc.", "type": "Expansion", "stage": "Lost", "created": "2026-09-17", "close": "2026-09-17", "source": "-", "segment": "Enterprise", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Ruta Lojkaite", "ownerRole": "EMEA - Ent AE UKI 3", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dtA58YAE", "name": "EXP - PLG/CSM - SMART IMPORT - add 3 agents - GC", "account": "SMART IMPORT S.R.L.", "type": "Expansion", "stage": "Failed Finance Audit", "created": "2026-09-17", "close": "2026-09-22", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Eastern Europe", "country": "Romania", "owner": "Gaia Cebulec", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dtBArYAM", "name": "PLG CSM | Copilot", "account": "Innov'Axe", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-10-31", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "France", "country": "France", "owner": "Alba Dell'Angelo", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dtGH2YAM", "name": "PLG - EX| Add 3 seats", "account": "Virinco AS", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-17", "close": "2026-09-21", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Norway", "owner": "Alessandro De Stefano", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000dtR4LYAU", "name": "PLG | EXP | Upgrade to Suite Growth", "account": "Lifeaz", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "France", "country": "France", "owner": "Youssef Elgamal", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dtlr3YAA", "name": "PLG | WeConvene | CX | Suite Pro (2)", "account": "WeConvene Inc.", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-17", "close": "2026-10-01", "source": "-", "segment": "SMB", "acctRegion": "APAC", "subRegion": "ASIA", "country": "Hong Kong", "owner": "Kelly Lau", "ownerRole": "APAC - SMB AE GCR", "ownerType": "other", "repRegion": "APAC", "createdBy": "Yigit İkinci"}, {"id": "006PC00000du3ROYAY", "name": "PLG | Rubber Brasil | EXP | Add Talk Credits", "account": "Rubber Brasil", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "LATAM", "subRegion": "Brazil", "country": "Brazil", "owner": "Carolina Oliveira", "ownerRole": "LATAM - Com Brazil Group AE", "ownerType": "other", "repRegion": "Other", "createdBy": "Jennifer Leo"}, {"id": "006PC00000duA9VYAU", "name": "PLG SMB | NB | Suite growth (4)", "account": "Paratext", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-17", "close": "2026-09-22", "source": "-", "segment": "Commercial", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Spencer Brown", "ownerRole": "AMER - Com AE West 2", "ownerType": "other", "repRegion": "Other", "createdBy": "Valeria Tomich"}, {"id": "006PC00000duPq5YAE", "name": "PLG NB | Suite pro (50)", "account": "Pluang", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-11-16", "source": "Website-Trial", "segment": "Digital", "acctRegion": "APAC", "subRegion": "INDIA", "country": "India", "owner": "Rosette Rapin", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Valeria Tomich"}, {"id": "006PC00000duSHiYAM", "name": "PLG | Premium Guard Inc. | EXP | Agent Add (20)", "account": "Premium Guard Inc.", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-17", "close": "2026-09-22", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Claudio Serina", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000duZ6IYAU", "name": "PLG | Exp addorecovery | Plan shift - 1.5K", "account": "Addorecovery", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-17", "close": "2026-09-22", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Samuel Moncada", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000duhGkYAI", "name": "PLG | NB | Suite pro (5)", "account": "7Q Spa Laser & Aesthetics", "type": "New Business", "stage": "03 - Establish Value", "created": "2026-09-17", "close": "2026-09-30", "source": "Website-Contact Sales", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Oliver Alvarez del Castillo", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000duh3qYAA", "name": "PLG/EXP/Oxxo", "account": "Oxxo Gas", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-17", "close": "2027-01-20", "source": "-", "segment": "Enterprise", "acctRegion": "LATAM", "subRegion": "Mexico", "country": "Mexico", "owner": "Alessandra Aliaga", "ownerRole": "LATAM - Ent AE SSAC 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000ducguYAA", "name": "PLG/NB/SuitePro/Archetype Infrastructure Solutions-", "account": "Archetype Infrastructure Solutions", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-11-16", "source": "Website-Contact Sales", "segment": "Digital", "acctRegion": "LATAM", "subRegion": "SSA", "country": "Costa Rica", "owner": "Diego Pérez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000duwajYAA", "name": "PLG | Dialogus Procesos S.A.P.I. de C.V. | EXP | Add ARs", "account": "Dialogus Procesos S.A.P.I. de C.V.", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-09-30", "source": "-", "segment": "Enterprise", "acctRegion": "LATAM", "subRegion": "Mexico", "country": "Mexico", "owner": "Andres Avellaneda", "ownerRole": "LATAM - Ent AE SSAC 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dv7cbYAA", "name": "PLG + CSM | OtO Lawn | EXP | Add QA", "account": "OtO Lawn", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-17", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Victor Milagres", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dvZc5YAE", "name": "PLG | NB | Stylers made to measure GmbH | Suite Growth", "account": "Stylers made to measure GmbH", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-18", "close": "2026-09-18", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "DACH", "country": "Germany", "owner": "Youssef Elgamal", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000dw4MXYAY", "name": "PLG | NewPro Containers | EXP | Add ARs + Copilot + ProServ", "account": "NewPro Containers", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-18", "close": "2026-10-31", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Rafael Lemos", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dw5c1YAA", "name": "PLG | Expansion | Plan shift", "account": "Würth Modyf GmbH und Co KG", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-18", "close": "2026-09-30", "source": "-", "segment": "Enterprise", "acctRegion": "EMEA", "subRegion": "DACH", "country": "Germany", "owner": "Maximilian Erlinghagen", "ownerRole": "EMEA - Ent AE DACH 1", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dwWgzYAE", "name": "PLG Commercial | NB | Suite pro (10)", "account": "Lease Crutcher Lewis", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-18", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Amber Fonseca", "ownerRole": "AMER - Com AE West 2", "ownerType": "other", "repRegion": "Other", "createdBy": "Valeria Tomich"}, {"id": "006PC00000dwnbPYAQ", "name": "PLG | Copilot Add-on", "account": "DiscountFilters.com", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-18", "close": "2026-10-12", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Tim Boruff", "ownerRole": "AMER - SMB CAE East 4", "ownerType": "other", "repRegion": "Other", "createdBy": "Yigit İkinci"}, {"id": "006PC00000dx0APYAY", "name": "PLG | Specter Technologies Limited SEZC | Early Renewal", "account": "Specter Technologies Limited SEZC", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-18", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Victor Suarez", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000dxgO9YAI", "name": "PLG | EXP | Alliance Foundation Trials | Suite Pro or Suite Enterprise", "account": "Alliance Foundation Trials, LLC", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-18", "close": "2026-10-02", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Maria Soraya Gomez", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000dxfQVYAY", "name": "PLG | A25 | EXP | Agent Add (+6)", "account": "A25", "type": "Expansion", "stage": "Lost", "created": "2026-09-18", "close": "2026-09-21", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Jennifer Leo", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e1A8EYAU", "name": "PLG | NB | AAA Black | Suite Plan", "account": "AAA Black", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-09-28", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ANZ", "country": "Australia", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000e1QHkYAM", "name": "PLG | EXP | Cloud Carib Ltd. | Light Agents", "account": "Cloud Carib Ltd.", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-21", "close": "2026-09-25", "source": "-", "segment": "Commercial", "acctRegion": "LATAM", "subRegion": "SSA", "country": "Bahamas", "owner": "Carlos Vólquez", "ownerRole": "LATAM - Com AE SSAC 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Jean Logro"}, {"id": "006PC00000e1b6XYAQ", "name": "PLG | EXP | Exin Holding B.V. | Add Agents", "account": "Exin Holding B.V.", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-21", "close": "2026-10-02", "source": "-", "segment": "SMB", "acctRegion": "EMEA", "subRegion": "Benelux", "country": "Netherlands", "owner": "Victor Cuevas", "ownerRole": "EMEA - SMB AE BNL", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000e1dDBYAY", "name": "PLG - EX| Add 1 seat", "account": "Raven Defense Corp", "type": "Expansion", "stage": "04 - Demonstrate Value", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Ana Paola Rivas", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e1TnVYAU", "name": "PLG| Partner | EXP | Finbiosoft - subdomain oilijalonenhelp | Guide Lite", "account": "Finbiosoft", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-21", "close": "2026-09-25", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Finland", "owner": "Guilherme Carvalho", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000e1WAQYA2", "name": "PLG - EX| Add 24 seats Support Team", "account": "Techlab Security", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ASIA", "country": "Malaysia", "owner": "Rosette Rapin", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e1h8jYAA", "name": "PLG | EXP | Yogi Tea | Copilot", "account": "Yogi Tea", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Jess Rivera", "ownerRole": "AMER - Com AE West 2", "ownerType": "other", "repRegion": "Other", "createdBy": "Alessio Orlando"}, {"id": "006PC00000e1VEDYA2", "name": "PLG - EX | Guide Pro", "account": "Transportes Pesa", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Iberia", "country": "Spain", "owner": "Alba Dell'Angelo", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e23KXYAY", "name": "PLG | Expansion | Add seat (6)", "account": "A25", "type": "Expansion", "stage": "07 - Signed", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Valeria Tomich", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e1pXjYAI", "name": "PLG | EXP | Add 7 seat", "account": "Fidelity National Financial", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-21", "close": "2026-10-16", "source": "-", "segment": "Enterprise", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Lauren O'Connor", "ownerRole": "AMER - Ent AE East 4", "ownerType": "other", "repRegion": "Other", "createdBy": "Yigit İkinci"}, {"id": "006PC00000e2006YAA", "name": "PLG - EX | 400 ARs", "account": "Ace Parking", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Enterprise", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Lily Tang", "ownerRole": "AMER - Ent AE West 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e2BDIYA2", "name": "PLG SMB | NB | Suite pro (7)", "account": "Responsible Gambling Council", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Justin Brosnan", "ownerRole": "AMER - SMB NAE East", "ownerType": "other", "repRegion": "Other", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e2U6HYAU", "name": "PLG | NB Perun moto | Support team (2)", "account": "Perun moto", "type": "New Business", "stage": "08 - Closed", "created": "2026-09-21", "close": "2026-09-22", "source": "Website-Trial", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Balkan", "country": "Serbia", "owner": "Valeria Tomich", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e2n7FYAQ", "name": "PLG-Kanel Spices-Temporary Agents", "account": "Kanel Spices", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "Canada", "country": "Canada", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000e2x3NYAQ", "name": "PLG | Expansion | Plan shift", "account": "Mobile Mower Medics, Inc.", "type": "Expansion", "stage": "Failed Finance Audit", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Valeria Tomich", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e3AexYAE", "name": "PLG-Astera Software-Restore Guide Legacy", "account": "Astera Software", "type": "Expansion", "stage": "08 - Closed", "created": "2026-09-21", "close": "2026-09-22", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Julio Vicente", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Julio Vicente"}, {"id": "006PC00000e3Dg1YAE", "name": "PLG | CoDev | NB | Suite Ent (+45)", "account": "co.dev", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-11-20", "source": "Website-Contact Sales", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Emilio Palacios", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e3JNGYA2", "name": "PLG | Trackops, LLC | EXP | Add Chat / Suite Upgrade + ARs", "account": "Trackops, LLC", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Dámaris Ramírez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e3Ex4YAE", "name": "PLG | Arlo Healthcare [Railway Health Inc] | NB | Suite Pro", "account": "Arlo Healthcare [Railway Health Inc]", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-10-31", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Mariana Gonzalez", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e3OOYYA2", "name": "CSM |PLG | Expansion | Plan Shift | Suite ENT (3)", "account": "Gemnote", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Valeria Tomich", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e3OrdYAE", "name": "PLG/EXP/AddAgents(4)/Retail Insights", "account": "Retail Insights, LLC", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-21", "close": "2026-09-23", "source": "-", "segment": "SMB", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Daniel Listrom", "ownerRole": "AMER - SMB CAE East 4", "ownerType": "other", "repRegion": "Other", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000e3Od4YAE", "name": "PLG | Professional Training Institute, Inc. | EXP | Upgrade to Support Team + Messaging Pro + Knowledge Pro", "account": "Professional Training Institute, Inc.", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-21", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Jennifer Leo", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e3SAQYA2", "name": "PLG/EXP/SuiteTeam/PTI", "account": "Professional Training Institute, Inc.", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Pamela De la Vega", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000e3IfiYAE", "name": "Temporary agents", "account": "TLATech dba Syllo", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Alexandra Betancourt", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Alexandra Betancourt"}, {"id": "006PC00000e3lbFYAQ", "name": "PLG | EXP | Farmacias Los Hidalgos | Add Talk Credits only", "account": "Farmacias Los Hidalgos", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-21", "close": "2026-09-22", "source": "-", "segment": "Commercial", "acctRegion": "LATAM", "subRegion": "SSA", "country": "Dominican Republic", "owner": "Carlos Vólquez", "ownerRole": "LATAM - Com AE SSAC 1", "ownerType": "other", "repRegion": "Other", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000e3jeJYAQ", "name": "PLG | EXP | The Dessy Group | upgrade to Suite Plan", "account": "The Dessy Group", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-10-09", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Rafael Lemos", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jean Logro"}, {"id": "006PC00000e3tXBYAY", "name": "PLG | EXP | Gateway Network Connections, LLC | Copilot", "account": "Gateway Network Connections, LLC", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-10-09", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Ana Paola Rivas", "ownerRole": "AMER/LATAM - Digital Sales AE 3", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jean Logro"}, {"id": "006PC00000e3wq1YAA", "name": "PLG | EXP | World Max | Change Term", "account": "World Max", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "APAC", "subRegion": "ANZ", "country": "Australia", "owner": "Icarus Besana", "ownerRole": "APAC - Digital Sales AE 2", "ownerType": "ds", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000e3zSwYAI", "name": "PLG | EXP | Steel Lighting Co | Add on WFM and QA (Bundle)", "account": "Steel Lighting Co", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Samuel Moncada", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Charlene Ferrera"}, {"id": "006PC00000e44POYAY", "name": "PLG | EXP | HK SishunTrade Co.,Limited | Copilot", "account": "HK SishunTrade Co.,Limited", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-10-30", "source": "-", "segment": "Commercial", "acctRegion": "APAC", "subRegion": "ASIA", "country": "China", "owner": "Janet Cheng", "ownerRole": "APAC - Com AE Asia GCR", "ownerType": "other", "repRegion": "APAC", "createdBy": "Jean Logro"}, {"id": "006PC00000e45V9YAI", "name": "PLG | EXP | JÖST GmbH & Co. KG | add 2 agents", "account": "JÖST GmbH & Co. KG", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-09-25", "source": "-", "segment": "Commercial", "acctRegion": "EMEA", "subRegion": "DACH", "country": "Germany", "owner": "Tim Jastrzembski", "ownerRole": "EMEA - Com AE DACH", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Jean Logro"}, {"id": "006PC00000e4KU9YAM", "name": "PLG - EX | Copilot", "account": "Eflexfuel", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Finland", "owner": "Zoe Keane", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e4MqvYAE", "name": "PLG - EX| Change to Suite Pro", "account": "ITL Holdings South Africa (PTY) Ltd", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "EMEA", "subRegion": "ILZA", "country": "South Africa", "owner": "Steven Toal-Lennon", "ownerRole": "EMEA - AE Africa", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e4fDdYAI", "name": "PLG | EXP | Suite Enterprise", "account": "TOTEME AB", "type": "Expansion", "stage": "03 - Establish Value", "created": "2026-09-22", "close": "2026-10-16", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Nordics", "country": "Sweden", "owner": "Maria Soraya Gomez", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Yigit İkinci"}, {"id": "006PC00000e4VxTYAU", "name": "PLG ENT | NB Suite pro  (30)", "account": "Huda Beauty (CUSTOMER VIA VENTRICA ELA)", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "EMEA", "subRegion": "Middle East", "country": "United Arab Emirates", "owner": "Mazen Al Fawaz", "ownerRole": "EMEA - AE Middle East", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e4htlYAA", "name": "PLG - EX | AIA", "account": "Lenox Park Solutions, Inc.", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-10-31", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Oliver Alvarez del Castillo", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e4l9NYAQ", "name": "PLG | GRUPO PROGESTION | NB | Suite Pro (CX + ES) (+5)", "account": "GRUPO PROGESTION", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-10-30", "source": "-", "segment": "SMB", "acctRegion": "LATAM", "subRegion": "SSA", "country": "Chile", "owner": "Bianca Grullon", "ownerRole": "LATAM - SMB AE SSAC", "ownerType": "other", "repRegion": "Other", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e4nfpYAA", "name": "PLG | EXP | Virtual Medical Academy | add 4 seats", "account": "Virtual Medical Academy", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Middle East", "country": "Saudi Arabia", "owner": "Kevin Nolan", "ownerRole": "EMEA - Digital Sales AE 1", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Alessio Orlando"}, {"id": "006PC00000e4jkIYAQ", "name": "PLG - NB | Suite", "account": "DGESS - Diagnostico e Gestao Especializada em Servicos de Saude", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "-", "subRegion": "-", "country": "-", "owner": "Milena Barbosa", "ownerRole": "EMEA - PLG AE", "ownerType": "plg", "repRegion": "EMEA", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e4sdtYAA", "name": "PLG + CSM | Überland Funk | NB | Suite Team (+2)", "account": "Telservice24 AG", "type": "New Business", "stage": "03 - Establish Value", "created": "2026-09-22", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "DACH", "country": "Switzerland", "owner": "Jan Powol", "ownerRole": "EMEA - Digital Sales AE 3", "ownerType": "ds", "repRegion": "EMEA", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e4ZWRYA2", "name": "Partner/PLG-The Department for Levelling Up, Housing and Communities-Expansion-Support/Suite Enterprise +Agents Add", "account": "The Department for Levelling Up, Housing and Communities", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-10-31", "source": "-", "segment": "Enterprise", "acctRegion": "EMEA", "subRegion": "UK & I", "country": "United Kingdom", "owner": "Neil Madlani", "ownerRole": "EMEA - Ent AE UKI 2", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Julio Vicente"}, {"id": "006PC00000e51u7YAA", "name": "PLG - EX| new instance - suite pro x1", "account": "ScanBizCards", "type": "Expansion", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Dani Orellan", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Milena Barbosa"}, {"id": "006PC00000e4yZfYAI", "name": "PLG | Diversified Payments | NB | Suite Pro (+4)", "account": "Diversified Payments", "type": "New Business", "stage": "04 - Demonstrate Value", "created": "2026-09-22", "close": "2026-10-30", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Victor Suarez", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e52OlYAI", "name": "PLG | EXP | add 2 seats", "account": "HEBREW ACADEMY OF LONG BEACH", "type": "Expansion", "stage": "04 - Demonstrate Value", "created": "2026-09-22", "close": "2026-09-25", "source": "-", "segment": "Digital", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Claudio Serina", "ownerRole": "AMER/LATAM - Digital Sales AE 1", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Alessio Orlando"}, {"id": "006PC00000e5N3NYAU", "name": "PLG-Merbag-Expansion-Suite Pro", "account": "Merbag S.p.A.", "type": "Expansion", "stage": "02 - Confirm Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "EMEA", "subRegion": "Italy", "country": "Italy", "owner": "Marco Ravano", "ownerRole": "EMEA - Com AE Iberia & Italy", "ownerType": "other", "repRegion": "EMEA", "createdBy": "Julio Vicente"}, {"id": "006PC00000e52F5YAI", "name": "PLG Commercial | NB | Suite pro (4)", "account": "Wyandot Center for Community Behavioral Healthcare, Inc.", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Commercial", "acctRegion": "Americas", "subRegion": "United States", "country": "United States", "owner": "Adam McKenzie", "ownerRole": "AMER - Com AE West 2", "ownerType": "other", "repRegion": "Other", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e5VCEYA2", "name": "PLG | Sisfrete | NB | Suite Team (+10)", "account": "Sisfrete", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-11-21", "source": "-", "segment": "Digital", "acctRegion": "LATAM", "subRegion": "Brazil", "country": "Brazil", "owner": "Bruno Souza", "ownerRole": "AMER/LATAM - Digital Sales AE 2", "ownerType": "ds", "repRegion": "AMER/LATAM", "createdBy": "Jennifer Leo"}, {"id": "006PC00000e5pKcYAI", "name": "PLG | Expansion | chat team (2)", "account": "Perun moto", "type": "Expansion", "stage": "06 - Contracting", "created": "2026-09-22", "close": "2026-09-30", "source": "-", "segment": "Digital", "acctRegion": "EMEA", "subRegion": "Balkan", "country": "Serbia", "owner": "Valeria Tomich", "ownerRole": "AMER/LATAM - PLG AE", "ownerType": "plg", "repRegion": "AMER/LATAM", "createdBy": "Valeria Tomich"}, {"id": "006PC00000e5oGUYAY", "name": "PLG |  Volix | NB | Suite Pro (+5)", "account": "Volix", "type": "New Business", "stage": "01 - Qualify Need", "created": "2026-09-22", "close": "2026-10-30", "source": "-", "segment": "SMB", "acctRegion": "LATAM", "subRegion": "Brazil", "country": "Brazil", "owner": "Nathan Silva Baltor", "ownerRole": "LATAM - SMB AE Brazil", "ownerType": "other", "repRegion": "Other", "createdBy": "Jennifer Leo"}]};
+
+// ---------- palette handles ----------
+const css = getComputedStyle(document.body);
+const C = () => {
+  const g = getComputedStyle(document.body);
+  return {
+    nb: g.getPropertyValue('--nb').trim(), exp: g.getPropertyValue('--exp').trim(),
+    over: g.getPropertyValue('--over').trim(), under: g.getPropertyValue('--under').trim(),
+    ink: g.getPropertyValue('--ink').trim(), ink2: g.getPropertyValue('--ink2').trim(),
+    muted: g.getPropertyValue('--muted').trim(), grid: g.getPropertyValue('--grid').trim(),
+    baseline: g.getPropertyValue('--baseline').trim(), band: g.getPropertyValue('--band').trim(),
+    f1: g.getPropertyValue('--funnel-1').trim(), f2: g.getPropertyValue('--funnel-2').trim(), f3: g.getPropertyValue('--funnel-3').trim(),
+  };
+};
+
+// ---------- stats helpers ----------
+function erf(x) {
+  const s = x < 0 ? -1 : 1, ax = Math.abs(x);
+  const t = 1 / (1 + 0.47047 * ax);
+  const poly = 0.3480242 * t - 0.0958798 * t * t + 0.7478556 * t * t * t;
+  return s * (1 - poly * Math.exp(-ax * ax));
+}
+const normalCdf = z => 0.5 * (1 + erf(z / Math.SQRT2));
+function chiSquareP(chi2, df) {
+  if (df <= 0) return 1;
+  if (chi2 <= 0) return 1;
+  const z = (Math.cbrt(chi2 / df) - (1 - 2 / (9 * df))) / Math.sqrt(2 / (9 * df));
+  return Math.min(1, Math.max(0, 1 - normalCdf(z)));
+}
+function statsFor(counts) {
+  const N = counts.length, n = counts.reduce((a, b) => a + b, 0);
+  if (!N || !n) return null;
+  const mean = n / N;
+  const sd = Math.sqrt(counts.reduce((a, c) => a + (c - mean) ** 2, 0) / N);
+  const chi2 = mean > 0 ? counts.reduce((a, c) => a + (c - mean) ** 2, 0) / mean : 0;
+  const expSd = Math.sqrt(mean);
+  return {
+    N, n, mean, sd, cv: mean ? sd / mean : 0,
+    spreadRatio: expSd ? sd / expSd : 0,
+    chi2, df: N - 1, p: chiSquareP(chi2, N - 1),
+    zeros: counts.filter(c => c === 0).length,
+  };
+}
+
+// ---------- data ----------
+const START = P.startDate;
+const digital = P.opps.filter(o => o.segment === 'Digital');
+const dsOpps = digital.filter(o => o.ownerType === 'ds');
+const plgKept = digital.filter(o => o.ownerType === 'plg');
+const otherSeg = P.opps.filter(o => o.segment !== 'Digital');
+const rosterNames = new Set(P.roster.map(r => r.name));
+const offRosterDs = dsOpps.filter(o => !rosterNames.has(o.owner));
+
+document.getElementById('counts-line').textContent =
+  `${P.opps.length} opps since ${START} · ${P.roster.length} active DS AEs`;
+
+// ---------- filters ----------
+const state = { region: 'All', type: 'All' };
+document.getElementById('f-region').addEventListener('change', e => { state.region = e.target.value; renderScoped(); });
+document.getElementById('f-type').addEventListener('change', e => { state.type = e.target.value; renderScoped(); });
+
+const typeOk = o => state.type === 'All' || o.type === state.type;
+const regionOkRep = r => state.region === 'All' || r.region === state.region;
+
+function scopedReps() {
+  return P.roster.filter(regionOkRep).map(r => {
+    const mine = dsOpps.filter(o => o.owner === r.name && typeOk(o));
+    const nb = mine.filter(o => o.type === 'New Business').length;
+    return { ...r, nb, exp: mine.length - nb, total: mine.length,
+             last: mine.reduce((a, o) => o.created > a ? o.created : a, '') };
+  });
+}
+// Stratified stats: each rep measured against their own region pool's even share.
+function scopedStats(reps) {
+  const byRegion = {};
+  reps.forEach(r => { (byRegion[r.region] = byRegion[r.region] || []).push(r); });
+  let chi2 = 0, df = 0, expected = {};
+  Object.entries(byRegion).forEach(([reg, rs]) => {
+    const s = statsFor(rs.map(r => r.total));
+    if (!s) return;
+    chi2 += s.chi2; df += s.df;
+    rs.forEach(r => { expected[r.name] = { e: s.mean, sd: s.sd || 0, regionStats: s }; });
+  });
+  const flat = reps.map(r => r.total);
+  const overall = statsFor(flat);
+  return { overall, byRegion, expected, chi2, df, p: chiSquareP(chi2, df) };
+}
+
+// ---------- rendering helpers ----------
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function txt(parent, x, y, str, cls, anchor) {
+  const t = el('text', { x, y, 'class': cls || 'axis-text', 'text-anchor': anchor || 'start' }, parent);
+  t.textContent = str;
+  return t;
+}
+function barPath(x, y, w, h, r) {
+  r = Math.max(0, Math.min(r, h / 2, w));
+  if (w <= 0.01) return '';
+  return `M${x},${y} H${x + w - r} A${r},${r} 0 0 1 ${x + w},${y + r} V${y + h - r} A${r},${r} 0 0 1 ${x + w - r},${y + h} H${x} Z`;
+}
+const tip = document.getElementById('tip');
+function showTip(evt, build) {
+  tip.textContent = '';
+  build(tip);
+  tip.style.display = 'block';
+  const pad = 14, r = tip.getBoundingClientRect();
+  let x = evt.clientX + pad, y = evt.clientY + pad;
+  if (x + r.width > innerWidth - 8) x = evt.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = evt.clientY - r.height - pad;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+function hideTip() { tip.style.display = 'none'; }
+function tipRow(parent, key, val, color) {
+  const row = document.createElement('div'); row.className = 't-row';
+  const k = document.createElement('span'); k.className = 'k';
+  if (color) { const lk = document.createElement('span'); lk.className = 'lk'; lk.style.background = color; k.appendChild(lk); }
+  k.appendChild(document.createTextNode(key));
+  const v = document.createElement('span'); v.className = 'v'; v.textContent = val;
+  row.appendChild(k); row.appendChild(v); parent.appendChild(row);
+}
+function tipTitle(parent, s) { const d = document.createElement('div'); d.className = 't-title'; d.textContent = s; parent.appendChild(d); }
+function hoverable(node, build) {
+  node.setAttribute('tabindex', '0');
+  node.classList.add('mark');
+  node.addEventListener('pointermove', e => showTip(e, build));
+  node.addEventListener('pointerleave', hideTip);
+  node.addEventListener('focus', e => showTip(e, build));
+  node.addEventListener('blur', hideTip);
+}
+const fmt1 = v => (Math.round(v * 10) / 10).toString();
+
+// ---------- funnel (global, above filters) ----------
+function renderFunnel() {
+  const c = C(), host = document.getElementById('funnel');
+  host.textContent = '';
+  const rows = [
+    { label: 'Created by PLG', sub: 'all segments', v: P.opps.length, fill: c.f1 },
+    { label: 'Digital-segment accounts', sub: `${otherSeg.length} routed to SMB / Commercial / Enterprise / other segments`, v: digital.length, fill: c.f2 },
+    { label: 'With Digital Sales AEs', sub: `${plgKept.length} kept by PLG reps`, v: dsOpps.length, fill: c.f3 },
+  ];
+  const W = 960, H = 150, x0 = 210, bw = 620, rh = 34, gap = 14;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Distribution flow' }, host);
+  const max = rows[0].v || 1;
+  rows.forEach((r, i) => {
+    const y = 8 + i * (rh + gap);
+    const w = Math.max(2, r.v / max * bw);
+    const p = el('path', { d: barPath(x0, y, w, rh, 4), fill: r.fill }, svg);
+    txt(svg, x0 - 10, y + rh / 2 + 4, r.label, 'name-text', 'end');
+    txt(svg, x0 + w + 8, y + rh / 2 + 4, `${r.v}  (${Math.round(r.v / max * 100)}%)`, 'val-text');
+    hoverable(p, t => { tipTitle(t, r.label); tipRow(t, 'Opportunities', r.v); tipRow(t, 'Share of created', Math.round(r.v / max * 100) + '%'); if (r.sub) tipRow(t, 'Note', r.sub); });
+    txt(svg, x0, y + rh + 11, i ? r.sub : '', 'axis-text');
+  });
+  const note = document.createElement('div');
+  note.className = 'fn-note';
+  const segCount = {};
+  otherSeg.forEach(o => { segCount[o.segment] = (segCount[o.segment] || 0) + 1; });
+  note.textContent = 'Non-Digital routing: ' + Object.entries(segCount).map(([k, v]) => `${k} ${v}`).join(' · ');
+  host.appendChild(note);
+}
+
+// ---------- KPIs ----------
+function renderKpis(reps, S) {
+  const host = document.getElementById('kpi');
+  host.textContent = '';
+  const n = reps.reduce((a, r) => a + r.total, 0);
+  const withAny = reps.filter(r => r.total > 0).length;
+  const tiles = [
+    { label: 'Opps with DS AEs', value: n, delta: state.type === 'All' ? '' : state.type },
+    { label: 'Reps receiving ≥ 1', value: `${withAny} / ${reps.length}`, delta: `${reps.length - withAny} at zero` },
+    { label: 'Avg per rep', value: S.overall ? fmt1(S.overall.mean) : '—', delta: 'expected = even share in region' },
+    { label: 'Spread vs random', value: S.overall ? S.overall.spreadRatio.toFixed(2) + '×' : '—', delta: '1.0× = indistinguishable from random' },
+    { label: 'Reps at zero', value: S.overall ? S.overall.zeros : 0,
+      delta: (() => { const z = reps.filter(r => !r.total).map(r => r.name);
+        return z.length ? z.slice(0, 3).join(', ') + (z.length > 3 ? ` +${z.length - 3} more` : '') : 'none'; })() },
+  ];
+  tiles.forEach(t => {
+    const d = document.createElement('div'); d.className = 'kpi';
+    const l = document.createElement('div'); l.className = 'label'; l.textContent = t.label;
+    const v = document.createElement('div'); v.className = 'value'; v.textContent = t.value;
+    const s = document.createElement('div'); s.className = 'delta'; s.textContent = t.delta;
+    d.append(l, v, s); host.appendChild(d);
+  });
+}
+
+// ---------- verdict ----------
+function renderVerdict(reps, S) {
+  const box = document.getElementById('verdict');
+  box.textContent = '';
+  if (!S.overall || !S.overall.n) {
+    box.classList.add('warn');
+    box.innerHTML = '';
+    const h = document.createElement('div'); h.className = 'v-head'; h.textContent = 'No opportunities in this slice yet';
+    box.appendChild(h); return;
+  }
+  const within1 = reps.filter(r => {
+    const e = S.expected[r.name]; if (!e || !e.sd) return true;
+    return Math.abs(r.total - e.e) <= e.sd;
+  }).length;
+  const outliers = reps.filter(r => {
+    const e = S.expected[r.name]; if (!e || !e.sd) return false;
+    return Math.abs(r.total - e.e) > 2 * e.sd;
+  });
+  const ok = S.p >= 0.05 && !outliers.length;
+  box.classList.toggle('warn', !ok);
+  const h = document.createElement('div'); h.className = 'v-head';
+  h.textContent = ok
+    ? '✓ Distribution is working — differences between reps are within the normal range'
+    : '⚠ Worth a look — spread is wider than even-share variation would suggest';
+  const b = document.createElement('div'); b.className = 'v-body';
+  const parts = [
+    `${within1} of ${reps.length} reps are within ±1 SD of their region's expected share.`,
+    `Spread is ${S.overall.spreadRatio.toFixed(2)}× what pure random assignment would produce (1.0× = random-like).`,
+    `Even-distribution test across region pools: χ² p = ${S.p >= 0.001 ? S.p.toFixed(2) : '<0.001'} (p ≥ 0.05 = no evidence of systematic imbalance).`,
+  ];
+  if (outliers.length) parts.push(`Outside ±2 SD: ${outliers.map(r => r.name).join(', ')}.`);
+  const zeros = reps.filter(r => !r.total).map(r => r.name);
+  if (zeros.length) parts.push(`Yet to receive one: ${zeros.slice(0, 6).join(', ')}${zeros.length > 6 ? ` +${zeros.length - 6} more` : ''} — check ramp dates.`);
+  parts.push('Note: the motion is two weeks old — small counts amplify spread, and this view settles as weekly volume builds.');
+  b.textContent = parts.join(' ');
+  box.append(h, b);
+}
+
+// ---------- per-rep chart ----------
+function renderPerRep(reps, S) {
+  const c = C(), host = document.getElementById('per-rep');
+  host.textContent = '';
+  document.getElementById('perrep-sub').textContent =
+    `${state.region === 'All' ? 'All regions' : state.region} · ${state.type === 'All' ? 'New Business + Expansion' : state.type} · sorted by total. Reps at zero included.`;
+  const rows = [...reps].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name));
+  const nameW = 185, W = 960, top = 26, rh = 26, bh = 19, H = top + rows.length * rh + 34;
+  const plotW = W - nameW - 70;
+  const maxV = Math.max(1, ...rows.map(r => r.total), ...(S.overall ? [S.overall.mean + S.overall.sd] : [1]));
+  const x = v => nameW + v / maxV * plotW;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Opportunities per rep' }, host);
+
+  // gridlines + axis
+  const ticks = [];
+  for (let v = 0; v <= Math.ceil(maxV); v++) ticks.push(v);
+  ticks.forEach(v => {
+    el('line', { x1: x(v), y1: top - 8, x2: x(v), y2: top + rows.length * rh + 4, 'class': v ? 'grid-line' : 'base-line' }, svg);
+    txt(svg, x(v), H - 18, v, 'axis-text', 'middle');
+  });
+
+  // mean ± sd band (mean of the visible slice)
+  if (S.overall) {
+    const m = S.overall.mean, sd = S.overall.sd;
+    const bx0 = x(Math.max(0, m - sd)), bx1 = x(m + sd);
+    el('rect', { x: bx0, y: top - 8, width: bx1 - bx0, height: rows.length * rh + 12, 'class': 'band' }, svg);
+    el('line', { x1: x(m), y1: top - 8, x2: x(m), y2: top + rows.length * rh + 4, 'class': 'ref-line' }, svg);
+    txt(svg, x(m), 12, `mean ${fmt1(m)}`, 'axis-text', 'middle');
+  }
+
+  rows.forEach((r, i) => {
+    const y = top + i * rh + (rh - bh) / 2;
+    txt(svg, nameW - 10, y + bh / 2 + 4, r.name, 'name-text', 'end');
+    const wNb = x(r.nb) - x(0), wExp = x(r.exp) - x(0);
+    let cursor = nameW;
+    const gRow = el('g', {}, svg);
+    if (wNb > 0) {
+      const onlyEnd = wExp <= 0;
+      const p = el('path', { d: onlyEnd ? barPath(cursor, y, wNb, bh, 4) : `M${cursor},${y} h${wNb} v${bh} h${-wNb} Z`, fill: c.nb }, gRow);
+      hoverable(p, t => { tipTitle(t, r.name); tipRow(t, 'New Business', r.nb, c.nb); tipRow(t, 'Expansion', r.exp, c.exp); tipRow(t, 'Total', r.total); const e = S.expected[r.name]; if (e) tipRow(t, 'Region expected', fmt1(e.e)); });
+      cursor += wNb + 2;
+    }
+    if (wExp > 0) {
+      const p = el('path', { d: barPath(cursor, y, wExp, bh, 4), fill: c.exp }, gRow);
+      hoverable(p, t => { tipTitle(t, r.name); tipRow(t, 'New Business', r.nb, c.nb); tipRow(t, 'Expansion', r.exp, c.exp); tipRow(t, 'Total', r.total); const e = S.expected[r.name]; if (e) tipRow(t, 'Region expected', fmt1(e.e)); });
+      cursor += wExp;
+    }
+    txt(svg, cursor + 6, y + bh / 2 + 4, r.total, 'val-text');
+    if (!r.total) { // make zero rows hoverable
+      const hit = el('rect', { x: nameW, y, width: 24, height: bh, fill: 'transparent' }, gRow);
+      hoverable(hit, t => { tipTitle(t, r.name); tipRow(t, 'Total', 0); tipRow(t, 'Role', r.role); });
+    }
+  });
+}
+
+// ---------- deviation chart ----------
+function renderDeviation(reps, S) {
+  const c = C(), host = document.getElementById('deviation');
+  host.textContent = '';
+  if (!S.overall) return;
+  const rows = reps.map(r => {
+    const e = S.expected[r.name] || { e: 0, sd: 0 };
+    return { ...r, dev: r.total - e.e, exp: e.e, sd: e.sd };
+  }).sort((a, b) => b.dev - a.dev || a.name.localeCompare(b.name));
+  const nameW = 185, W = 960, top = 26, rh = 26, bh = 19, H = top + rows.length * rh + 34;
+  const maxAbs = Math.max(1, ...rows.map(r => Math.abs(r.dev)), S.overall.sd);
+  const cx = nameW + (W - nameW - 70) / 2, half = (W - nameW - 70) / 2;
+  const x = v => cx + v / maxAbs * half;
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Deviation from expected share' }, host);
+
+  // normal-range band: ±1 pooled SD of counts (uses visible slice SD)
+  const sd = S.overall.sd;
+  el('rect', { x: x(-sd), y: top - 8, width: x(sd) - x(-sd), height: rows.length * rh + 12, 'class': 'band' }, svg);
+  txt(svg, x(sd), 12, 'normal range ±1 SD', 'axis-text', 'middle');
+  // zero line + gridlines
+  el('line', { x1: x(0), y1: top - 8, x2: x(0), y2: top + rows.length * rh + 4, 'class': 'base-line' }, svg);
+  const step = Math.max(1, Math.round(maxAbs / 3));
+  for (let v = step; v <= Math.ceil(maxAbs); v += step) {
+    [v, -v].forEach(s => {
+      el('line', { x1: x(s), y1: top - 8, x2: x(s), y2: top + rows.length * rh + 4, 'class': 'grid-line' }, svg);
+    });
+  }
+  for (let v = -step * Math.floor(maxAbs / step); v <= maxAbs; v += step) {
+    txt(svg, x(v), H - 18, (v > 0 ? '+' : '') + v, 'axis-text', 'middle');
+  }
+
+  rows.forEach((r, i) => {
+    const y = top + i * rh + (rh - bh) / 2;
+    const z = r.sd ? r.dev / r.sd : 0;
+    const label = Math.abs(z) >= 2 && r.total !== null ? r.name + '  ⚑' : r.name;
+    const nameEl = txt(svg, nameW - 10, y + bh / 2 + 4, label, 'name-text', 'end');
+    if (Math.abs(z) >= 2) nameEl.setAttribute('font-weight', '650');
+    if (Math.abs(r.dev) < 1e-9) { txt(svg, x(0) + 6, y + bh / 2 + 4, '0', 'val-text'); return; }
+    const x0 = r.dev > 0 ? x(0) : x(r.dev), w = Math.abs(x(r.dev) - x(0));
+    const p = el('path', { d: barPath(x0, y, w, bh, 4), fill: r.dev > 0 ? c.over : c.under }, svg);
+    hoverable(p, t => {
+      tipTitle(t, r.name);
+      tipRow(t, 'Opportunities', r.total);
+      tipRow(t, 'Expected (even share)', fmt1(r.exp));
+      tipRow(t, 'Deviation', (r.dev > 0 ? '+' : '') + fmt1(r.dev));
+      tipRow(t, 'z-score', fmt1(z));
+    });
+    txt(svg, r.dev > 0 ? x(r.dev) + 6 : x(r.dev) - 6, y + bh / 2 + 4, (r.dev > 0 ? '+' : '') + fmt1(r.dev), 'val-text', r.dev > 0 ? 'start' : 'end');
+  });
+}
+
+// ---------- weekly cadence ----------
+function mondayOf(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  const dow = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - dow);
+  return d.toISOString().slice(0, 10);
+}
+function renderWeekly() {
+  const c = C(), host = document.getElementById('weekly');
+  host.textContent = '';
+  const pool = new Set(P.roster.filter(regionOkRep).map(r => r.name));
+  const rows = dsOpps.filter(o => pool.has(o.owner));
+  const weeks = {};
+  rows.forEach(o => {
+    const w = mondayOf(o.created);
+    weeks[w] = weeks[w] || { nb: 0, exp: 0 };
+    if (o.type === 'New Business') weeks[w].nb++; else if (o.type === 'Expansion') weeks[w].exp++;
+  });
+  const keys = Object.keys(weeks).sort();
+  if (!keys.length) return;
+  // fill missing weeks
+  const all = [];
+  let d = new Date(keys[0] + 'T00:00:00Z');
+  const end = new Date(mondayOf(P.generatedAt.slice(0, 10)) + 'T00:00:00Z');
+  while (d <= end) { all.push(d.toISOString().slice(0, 10)); d.setUTCDate(d.getUTCDate() + 7); }
+  const thisWeek = mondayOf(P.generatedAt.slice(0, 10));
+  const series = all.map(w => ({ w, nb: (weeks[w] || { nb: 0 }).nb, exp: (weeks[w] || { exp: 0 }).exp, partial: w === thisWeek }));
+  const label = w => new Date(w + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+
+  const W = 960, H = 240, L = 40, R = 60, T = 16, B = 30;
+  const maxV = Math.max(2, ...series.map(s => Math.max(s.nb, s.exp)));
+  const x = i => L + (series.length === 1 ? 0.5 : i / (series.length - 1)) * (W - L - R);
+  const y = v => T + (1 - v / maxV) * (H - T - B);
+  const svg = el('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'Weekly cadence' }, host);
+  for (let v = 0; v <= maxV; v += Math.max(1, Math.round(maxV / 4))) {
+    el('line', { x1: L, y1: y(v), x2: W - R, y2: y(v), 'class': v ? 'grid-line' : 'base-line' }, svg);
+    txt(svg, L - 8, y(v) + 4, v, 'axis-text', 'end');
+  }
+  series.forEach((s, i) => { if (i % Math.ceil(series.length / 8) === 0 || i === series.length - 1) txt(svg, x(i), H - 12, label(s.w), 'axis-text', 'middle'); });
+
+  [['nb', c.nb, 'New Business'], ['exp', c.exp, 'Expansion']].forEach(([k, col, name]) => {
+    const pts = series.map((s, i) => [x(i), y(s[k])]);
+    // solid line through the last complete week; dashed into the in-progress week
+    const lastComplete = series.reduce((a, s, i) => s.partial ? a : i, 0);
+    const solid = pts.slice(0, lastComplete + 1);
+    const dSolid = solid.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    el('path', { d: dSolid, fill: 'none', stroke: col, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, svg);
+    if (lastComplete < pts.length - 1) {
+      const dPart = 'M' + pts[lastComplete][0].toFixed(1) + ',' + pts[lastComplete][1].toFixed(1) +
+        pts.slice(lastComplete + 1).map(p => ' L' + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join('');
+      el('path', { d: dPart, fill: 'none', stroke: col, 'stroke-width': 2, 'stroke-dasharray': '5 4', 'stroke-linecap': 'round' }, svg);
+    }
+    pts.forEach((p, i) => {
+      const partial = series[i].partial;
+      const dot = el('circle', { cx: p[0], cy: p[1], r: 4, fill: partial ? 'var(--surface-1)' : col, stroke: col, 'stroke-width': 2 }, svg);
+      if (partial) dot.setAttribute('stroke-dasharray', '2 2');
+      hoverable(dot, t => {
+        tipTitle(t, 'Week of ' + label(series[i].w) + (partial ? ' (in progress)' : ''));
+        tipRow(t, 'New Business', series[i].nb, c.nb);
+        tipRow(t, 'Expansion', series[i].exp, c.exp);
+        tipRow(t, 'Total', series[i].nb + series[i].exp);
+      });
+    });
+    // label the last COMPLETE point, not the in-progress one
+    const lp = pts[lastComplete], ls = series[lastComplete];
+    txt(svg, lp[0] + 8, lp[1] - 6, `${ls[k]}`, 'val-text');
+  });
+}
+
+// ---------- tables ----------
+function makeTable(host, cols, rows, defaultSort) {
+  let sortKey = defaultSort ? defaultSort.key : null, sortDir = defaultSort ? defaultSort.dir : 1;
+  const table = document.createElement('table');
+  const thead = document.createElement('thead'), tbody = document.createElement('tbody');
+  const hr = document.createElement('tr');
+  cols.forEach(col => {
+    const th = document.createElement('th');
+    th.textContent = col.label;
+    if (col.num) th.className = 'num';
+    th.setAttribute('scope', 'col');
+    th.addEventListener('click', () => {
+      if (sortKey === col.key) sortDir *= -1; else { sortKey = col.key; sortDir = col.num ? -1 : 1; }
+      paint();
+    });
+    hr.appendChild(th);
+  });
+  thead.appendChild(hr); table.appendChild(thead);
+  function paint() {
+    tbody.textContent = '';
+    const sorted = [...rows].sort((a, b) => {
+      const va = a[sortKey], vb = b[sortKey];
+      const cmp = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb));
+      return cmp * sortDir;
+    });
+    sorted.forEach(r => {
+      const tr = document.createElement('tr');
+      cols.forEach(col => {
+        const td = document.createElement('td');
+        if (col.num) td.className = 'num';
+        td.textContent = col.fmt ? col.fmt(r[col.key], r) : r[col.key];
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    // sort indicators
+    thead.querySelectorAll('th').forEach((th, i) => {
+      const col = cols[i];
+      th.textContent = col.label + (sortKey === col.key ? (sortDir === 1 ? ' ▲' : ' ▼') : '');
+    });
+  }
+  paint();
+  host.textContent = ''; host.appendChild(table);
+}
+
+function renderRegionTable() {
+  const rows = ['AMER/LATAM', 'EMEA', 'APAC'].map(reg => {
+    const pool = P.roster.filter(r => r.region === reg);
+    const counts = pool.map(r => dsOpps.filter(o => o.owner === r.name && typeOk(o)).length);
+    const s = statsFor(counts);
+    return { region: reg, reps: pool.length, opps: s ? s.n : 0, mean: s ? fmt1(s.mean) : '—',
+             sd: s ? fmt1(s.sd) : '—', spread: s ? s.spreadRatio.toFixed(2) + '×' : '—',
+             p: s ? (s.p >= 0.001 ? s.p.toFixed(2) : '<0.001') : '—',
+             verdict: s ? (s.p >= 0.05 ? '✓ Normal' : '⚠ Review') : '—', _p: s ? s.p : 1 };
+  });
+  const host = document.getElementById('region-table');
+  makeTable(host, [
+    { key: 'region', label: 'Region' },
+    { key: 'reps', label: 'Reps', num: 1 },
+    { key: 'opps', label: 'Opps', num: 1 },
+    { key: 'mean', label: 'Mean / rep', num: 1 },
+    { key: 'sd', label: 'SD', num: 1 },
+    { key: 'spread', label: 'Spread vs random', num: 1 },
+    { key: 'p', label: 'χ² p-value', num: 1 },
+    { key: 'verdict', label: 'Verdict' },
+  ], rows, { key: 'opps', dir: -1 });
+}
+
+function renderRepTable(reps, S) {
+  const rows = reps.map(r => {
+    const e = S.expected[r.name] || { e: 0, sd: 0 };
+    const share = S.overall && S.overall.n ? (100 * r.total / S.overall.n) : 0;
+    return { name: r.name, role: r.role, region: r.region, nb: r.nb, exp: r.exp, total: r.total,
+             share: share.toFixed(1) + '%', dev: (r.total - e.e >= 0 ? '+' : '') + fmt1(r.total - e.e),
+             z: e.sd ? fmt1((r.total - e.e) / e.sd) : '—', last: r.last || '—' };
+  });
+  makeTable(document.getElementById('rep-table'), [
+    { key: 'name', label: 'Rep' }, { key: 'role', label: 'Role' }, { key: 'region', label: 'Region' },
+    { key: 'nb', label: 'NB', num: 1 }, { key: 'exp', label: 'EXP', num: 1 }, { key: 'total', label: 'Total', num: 1 },
+    { key: 'share', label: 'Share', num: 1 }, { key: 'dev', label: 'vs expected', num: 1 },
+    { key: 'z', label: 'z', num: 1 }, { key: 'last', label: 'Latest opp' },
+  ], rows, { key: 'total', dir: -1 });
+}
+
+function renderOppTable() {
+  const pool = new Set(P.roster.filter(regionOkRep).map(r => r.name));
+  const rows = digital
+    .filter(o => typeOk(o))
+    .filter(o => state.region === 'All' || (pool.has(o.owner) ? P.roster.find(r => r.name === o.owner).region : o.repRegion) === state.region)
+    .map(o => ({ name: o.name, account: o.account, type: o.type, stage: o.stage,
+                 owner: o.owner, otype: o.ownerType === 'ds' ? 'DS AE' : o.ownerType === 'plg' ? 'PLG (kept)' : 'Other',
+                 region: o.acctRegion, created: o.created, close: o.close || '—', source: o.source }));
+  document.getElementById('opp-table-sub').textContent =
+    `${rows.length} Digital-segment opportunities in the current filter. Click a column to sort.`;
+  makeTable(document.getElementById('opp-table'), [
+    { key: 'name', label: 'Opportunity' }, { key: 'account', label: 'Account' },
+    { key: 'type', label: 'Type' }, { key: 'stage', label: 'Stage' },
+    { key: 'owner', label: 'Owner' }, { key: 'otype', label: 'Owner type' },
+    { key: 'region', label: 'Acct region' }, { key: 'created', label: 'Created' },
+    { key: 'close', label: 'Close' }, { key: 'source', label: 'Lead source' },
+  ], rows, { key: 'created', dir: -1 });
+}
+
+// ---------- orchestration ----------
+function renderScoped() {
+  const reps = scopedReps();
+  const S = scopedStats(reps);
+  renderKpis(reps, S);
+  renderVerdict(reps, S);
+  renderPerRep(reps, S);
+  renderDeviation(reps, S);
+  renderWeekly();
+  renderRegionTable();
+  renderRepTable(reps, S);
+  renderOppTable();
+}
+
+// theme toggle
+const savedTheme = localStorage.getItem('plg-ds-theme');
+if (savedTheme) document.body.setAttribute('data-theme', savedTheme);
+document.getElementById('theme-toggle').addEventListener('click', () => {
+  const cur = document.body.getAttribute('data-theme') ||
+    (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.body.setAttribute('data-theme', next);
+  localStorage.setItem('plg-ds-theme', next);
+  renderFunnel(); renderScoped();
+});
+
+renderFunnel();
+renderScoped();
+</script>
+</body>
+</html>
